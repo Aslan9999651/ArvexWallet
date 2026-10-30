@@ -9,17 +9,15 @@ from pyrogram import Client, filters
 from pyrogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
 # ==========================================
-# 1. إعدادات المتغيرات (مهم جداً أن تضع بياناتك هنا)
+# 1. إعدادات المتغيرات
 # ==========================================
-API_ID = 26347457               # 🔴 ضع API_ID من my.telegram.org
-API_HASH = "46a1b4f0da186537f3164714b3dae9a4"     # 🔴 ضع API_HASH
-BOT_TOKEN = "9086727497:AAEVYXwF6QbwpEIDt7VIUS_pQm_gU_vcz4w"   # 🔴 ضع توكن البوت من BotFather
-MONGO_URL = "mongodb+srv://aseelothman_db_user:TnMnkGXN5HyBSWmj@cluster0.hw07bcg.mongodb.net/" # 🔴 ضع رابط MongoDB الخاص بك
+API_ID = 26347457               
+API_HASH = "46a1b4f0da186537f3164714b3dae9a4"     
+BOT_TOKEN = "9086727497:AAEVYXwF6QbwpEIDt7VIUS_pQm_gU_vcz4w"   
+MONGO_URL = "mongodb+srv://aseelothman_db_user:TnMnkGXN5HyBSWmj@cluster0.hw07bcg.mongodb.net/" 
 
-# سيحاول جلب الرابط من إعدادات ريندر، وإن لم يجده سيستخدم رابطاً افتراضياً
 WEBAPP_URL = os.environ.get("RENDER_EXTERNAL_URL", "https://your-app-name.onrender.com")
-
-ADMIN_ID = "8627317155"         # 🔴 ضع الآيدي الخاص بك في تليجرام كأدمن
+ADMIN_ID = "8627317155"         
 
 # ==========================================
 # 2. إعداد قاعدة البيانات (MongoDB)
@@ -30,8 +28,9 @@ users_collection = db.users
 
 # ==========================================
 # 3. إعداد البوت (Pyrogram)
+# لاحظ أننا أضفنا in_memory=True لحل مشكلة السيرفرات السحابية
 # ==========================================
-bot = Client("ArvexBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+bot = Client("ArvexBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN, in_memory=True)
 
 @bot.on_message(filters.command("start"))
 async def start_cmd(client, message):
@@ -78,17 +77,14 @@ class UserData(BaseModel):
     req_deposit: float = 0.0
     has_deposited: bool = False
 
-# مسار لإبقاء السيرفر مستيقظاً 24/7 (سنستخدمه لاحقاً مع موقع cron-job)
 @app.get("/ping")
 async def ping():
     return {"status": "alive"}
 
-# عرض ملف HTML مباشرة
 @app.get("/")
 async def serve_frontend():
     return FileResponse("index.html")
 
-# API لجلب بيانات المستخدم
 @app.get("/api/user/{tg_id}")
 async def get_user(tg_id: str):
     user = await users_collection.find_one({"tg_id": tg_id})
@@ -99,7 +95,6 @@ async def get_user(tg_id: str):
     await users_collection.insert_one(new_user.copy())
     return new_user
 
-# API لتحديث بيانات المستخدم (للأدمن)
 @app.post("/api/admin/update_user")
 async def update_user(data: UserData, admin_id: str):
     if str(admin_id) != str(ADMIN_ID):
@@ -113,8 +108,11 @@ async def update_user(data: UserData, admin_id: str):
 @app.on_event("startup")
 async def on_startup():
     print("جاري تشغيل البوت مع السيرفر...")
-    import asyncio
-    asyncio.create_task(bot.start())
+    try:
+        await bot.start()
+        print("✅ تم تشغيل البوت بنجاح وهو يستمع للرسائل!")
+    except Exception as e:
+        print(f"❌ حدث خطأ أثناء تشغيل البوت: {e}")
 
 @app.on_event("shutdown")
 async def on_shutdown():
