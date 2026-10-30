@@ -1,4 +1,5 @@
 import asyncio
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -14,7 +15,7 @@ API_ID = 26347457               # 🔴 ضع API_ID من my.telegram.org
 API_HASH = "46a1b4f0da186537f3164714b3dae9a4"     # 🔴 ضع API_HASH
 BOT_TOKEN = "9086727497:AAEVYXwF6QbwpEIDt7VIUS_pQm_gU_vcz4w"   # 🔴 ضع توكن البوت من BotFather
 MONGO_URL = "mongodb+srv://aseelothman_db_user:TnMnkGXN5HyBSWmj@cluster0.hw07bcg.mongodb.net/" # 🔴 ضع رابط MongoDB الخاص بك
-import os
+
 # سيحاول جلب الرابط من إعدادات ريندر، وإن لم يجده سيستخدم رابطاً افتراضياً
 WEBAPP_URL = os.environ.get("RENDER_EXTERNAL_URL", "https://your-app-name.onrender.com")
 
@@ -35,13 +36,33 @@ bot = Client("ArvexBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 @bot.on_message(filters.command("start"))
 async def start_cmd(client, message):
     keyboard = ReplyKeyboardMarkup(
-        [[KeyboardButton("🚀 فتح محفظة ArvexPay", web_app=WebAppInfo(url=WEBAPP_URL))]],
+        [
+            [KeyboardButton("🚀 فتح المحفظة (Web3)", web_app=WebAppInfo(url=WEBAPP_URL))],
+            [KeyboardButton("🛡 حول المحفظة والأمان")]
+        ],
         resize_keyboard=True
     )
-    await message.reply_text(
-        f"أهلاً بك يا {message.from_user.first_name} 💳\nافتح محفظتك من الزر أدناه:",
-        reply_markup=keyboard
+    welcome_text = (
+        "مرحباً بك في بوت ArvexPay Web3 Wallet! 💎⚡\n"
+        "المحفظة المباشرة والآمنة لإدارة وتداول أصولك الرقمية\n"
+        "عبر شبكات البلوكشين (BSC, Ethereum, Polygon)\n"
+        "مباشرة من داخل تيليجرام."
     )
+    await message.reply_text(welcome_text, reply_markup=keyboard)
+
+@bot.on_message(filters.regex("حول المحفظة والأمان"))
+async def security_info(client, message):
+    info_text = (
+        "حول المحفظة والأمان\n\n"
+        "🛡 **الأمان والخصوصية في ArvexPay**\n"
+        "• محفظة غير حضانية (Non-Custodial): مفاتيحك السرية (Private Keys) تُخزن وتُشفر على جهازك فقط، ولا يمتلك سيرفر البوت أي صلاحية للوصول لأموالك.\n"
+        "• العبارة السرية (12 كلمة): هي وسيلتك الوحيدة لاسترجاع محفظتك، احفظها في مكان ورقي آمن ولا تشاركها مع أي شخص.\n"
+        "• الشبكات المدعومة:\n"
+        "* Binance Smart Chain (BNB)\n"
+        "* Ethereum Mainnet (ETH)\n"
+        "* Polygon Mainnet (MATIC)"
+    )
+    await message.reply_text(info_text)
 
 # ==========================================
 # 4. إعداد السيرفر (FastAPI)
@@ -92,7 +113,8 @@ async def update_user(data: UserData, admin_id: str):
 @app.on_event("startup")
 async def on_startup():
     print("جاري تشغيل البوت مع السيرفر...")
-    await bot.start()
+    import asyncio
+    asyncio.create_task(bot.start())
 
 @app.on_event("shutdown")
 async def on_shutdown():
